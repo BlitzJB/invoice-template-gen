@@ -72,6 +72,10 @@ async function keepOnlyFirstPage(inputFilePath, outputFilePath) {
     fs.writeFileSync(outputFilePath, newPdfBytes);
 }
 
+function makeStringFileNameSafe(fileName) {
+    return fileName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+}
+
 
 async function generateInvoicePipeline(invoiceNumber, invoiceData) {
     // generate corresponding file names for intermediate files, final file should be named as invoiceNumber.pdf in /invoices folder
@@ -81,9 +85,9 @@ async function generateInvoicePipeline(invoiceNumber, invoiceData) {
     // interim files should be palced in /temp folder
 
     const inputFilePath = `./template.xlsx`;
-    const dataUpdatedFilePath = `./temp/${invoiceNumber}-data-updated.xlsx`;
-    const pdfFilePath = `./temp/${invoiceNumber}-output.pdf`;
-    const finalPdfFilePath = `./invoices/${invoiceNumber}.pdf`;
+    const dataUpdatedFilePath = `./temp/${makeStringFileNameSafe(invoiceNumber)}-data-updated.xlsx`;
+    const pdfFilePath = `./temp/${makeStringFileNameSafe(invoiceNumber)}-output.pdf`;
+    const finalPdfFilePath = `./invoices/${makeStringFileNameSafe(invoiceNumber)}.pdf`;
 
     try {
         await replacePlaceholders(inputFilePath, dataUpdatedFilePath, invoiceData);
@@ -177,7 +181,6 @@ const dummyDataRequest = {
         TOTAL_TAX: '1442',
         GRAND_TOTAL: '2342'
     }
-
 };
 
 function buildObjectFromRequest(request) {

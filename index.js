@@ -224,7 +224,7 @@ app.post('/generateInvoice/:invoiceNumber', async (req, res) => {
   try {
     const invoiceNumber = req.params.invoiceNumber;
     await generateInvoiceService(req, res);
-    const invoiceUrl = `http://localhost:${port}/invoices/${invoiceNumber}.pdf`;
+    const invoiceUrl = `https://invoice.blitzdnd.com/invoices/${makeStringFileNameSafe(invoiceNumber)}.pdf`;
     res.status(200).json({ url: invoiceUrl });
   } catch (error) {
     console.error('Error generating invoice:', error);
@@ -235,7 +235,7 @@ app.post('/generateInvoice/:invoiceNumber', async (req, res) => {
 // Endpoint to serve invoice PDFs
 app.get('/invoices/:invoiceNumber.pdf', (req, res) => {
   const invoiceNumber = req.params.invoiceNumber;
-  const filePath = `./invoices/${invoiceNumber}.pdf`;
+  const filePath = `./invoices/${makeStringFileNameSafe(invoiceNumber)}.pdf`;
   fs.access(filePath, fs.constants.F_OK, (err) => {
     if (err) {
       console.error('File not found:', err);
@@ -249,15 +249,8 @@ app.get('/invoices/:invoiceNumber.pdf', (req, res) => {
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Server is running on http://localhost:${port} & https://invoice.blitzdnd.com/`);
 });
-
-
-// generateInvoicePipeline("1234141", buildObjectFromRequest(dummyDataRequest)).then(() => {
-//     console.log("Conversion complete");
-// }).catch((e) => {
-//     console.error("Error during conversion:", e);
-// })
 
 
 export {}

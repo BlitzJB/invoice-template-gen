@@ -3,6 +3,15 @@ import fs from 'fs';
 import { PDFDocument, rgb } from 'pdf-lib';
 import ExcelJS from 'exceljs';
 
+// create /invoices and /temp folders if they don't exist
+if (!fs.existsSync('./invoices')) {
+    fs.mkdirSync('./invoices');
+}
+
+if (!fs.existsSync('./temp')) {
+    fs.mkdirSync('./temp');
+}
+
 async function replacePlaceholders(inputFilePath, outputFilePath, data) {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(inputFilePath);
@@ -21,6 +30,14 @@ async function replacePlaceholders(inputFilePath, outputFilePath, data) {
             });
         });
     });
+
+    const itemIdKeys = Array.from({ length: 15 }, (_, i) => `ITEM_${i + 1}_ITEM_NO`);
+    const itemsCount = itemIdKeys.filter(key => data[key] !== '').length;
+
+    const worksheet = workbook.getWorksheet(1);
+    const firstBillRowIndex = 15;
+    const emptyBillRowsNumber = 15 - itemsCount
+    hideRows(worksheet, firstBillRowIndex + itemsCount, emptyBillRowsNumber);
 
     await workbook.xlsx.writeFile(outputFilePath);
 }
@@ -77,6 +94,14 @@ function makeStringFileNameSafe(fileName) {
 }
 
 
+function hideRows(worksheet, startRow, numRows) {
+    for (let i = startRow; i < startRow + numRows; i++) {
+      const row = worksheet.getRow(i);
+      row.height = 0; // Set the row height to 0
+      row.hidden = true // This is important since it prevents the hidden row from expanding during editing in Excel itself.
+    }
+}
+
 async function generateInvoicePipeline(invoiceNumber, invoiceData) {
     // generate corresponding file names for intermediate files, final file should be named as invoiceNumber.pdf in /invoices folder
     // input file will always be the template file ./template.xlsx
@@ -104,19 +129,6 @@ async function generateInvoicePipeline(invoiceNumber, invoiceData) {
     console.log("Pipeline completed for invoice:", invoiceNumber);
 }
 
-const data = {
-    INVOICE_NUMBER: '123456',
-    INVOICE_DATE: '2024-05-24',
-    CUSTOMER_NAME: 'John Doe',
-    CUSTOMER_ADDRESS: '123 Main St, Anytown, USA',
-    CUSTOMER_PHONE: '+91 999999999',
-    CUSTOMER_EMAIL: 'john.doe@example.com'
-};
-
-
-const main = async () => {
-    generateInvoicePipeline('1234567', data)
-}
 
 // main().then(() => {
 //     console.log("Conversion complete");
@@ -160,29 +172,6 @@ function buildObjectFromArray(items) {
 }
 
 
-const dummyDataRequest = {
-    invoiceNumber: '123456',
-    items: [
-        { ITEM_NO: '1', ITEM_DESCRIPTION: 'Description 1', ITEM_HSN: '123456', ITEM_QTY: '1', ITEM_UNIT_PRICE: '10', ITEM_TOTAL_PRICE: '10', ITEM_CGST: '1', ITEM_SGST: '1', ITEM_IGST: '0', ITEM_TAX: '2', ITEM_TOTAL: '12' },
-        { ITEM_NO: '2', ITEM_DESCRIPTION: 'Description 2', ITEM_HSN: '654321', ITEM_QTY: '2', ITEM_UNIT_PRICE: '5', ITEM_TOTAL_PRICE: '10', ITEM_CGST: '0.5', ITEM_SGST: '0.5', ITEM_IGST: '0', ITEM_TAX: '1', ITEM_TOTAL: '11' },
-    ],
-    placeholders: {
-        INVOICE_DATE: '2024-05-24',
-        CUSTOMER_NAME: 'John Doe',
-        CUSTOMER_ADDRESS: '123 Main St, Anytown, USA',
-        CUSTOMER_PHONE: '+91 999999999',
-        CUSTOMER_EMAIL: 'john.doe@example.com',
-        AMT_BEFORE_TAX: '123',
-        SUBTOTAL: '1245',
-        PAYMENT_METHOD: '5245',
-        TOTAL_CGST: '231',
-        TOTAL_SGST: '142',
-        TOTAL_IGST: '123123',
-        TOTAL_TAX: '1442',
-        GRAND_TOTAL: '2342'
-    }
-};
-
 function buildObjectFromRequest(request) {
     const result = {};
     result['INVOICE_NUMBER'] = request.invoiceNumber;
@@ -195,15 +184,17 @@ function buildObjectFromRequest(request) {
 function generateInvoiceService(req, res) {
     const invoiceNumber = req.params.invoiceNumber;
     const invoiceData = buildObjectFromRequest(req.body);
-    generateInvoicePipeline(invoiceNumber, invoiceData);
+    generateInvoicePipeline(invoiceNumber, invoiceData).then(() => {
+        res.status(200).json({ url: `https://invoice.blitzdnd.com/invoices/${makeStringFileNameSafe(invoiceNumber)}.pdf` });
+    }).catch((e) => {
+        console.error("Error generating invoice:", e);
+        res.status(500).json({ error: 'Internal server error' });
+    });
 }
 
 
 import express from 'express'
 import bodyParser from 'body-parser'
-import { promisify } from 'util'
-// import fs from 'fs'
-// const { generateInvoiceService } = require('./yourServiceFile'); // Assuming your service file is named yourServiceFile.js
 
 const app = express();
 const port = 9200;
@@ -222,10 +213,8 @@ app.use((req, res, next) => {
 // Endpoint to generate invoice
 app.post('/generateInvoice/:invoiceNumber', async (req, res) => {
   try {
-    const invoiceNumber = req.params.invoiceNumber;
-    await generateInvoiceService(req, res);
-    const invoiceUrl = `https://invoice.blitzdnd.com/invoices/${makeStringFileNameSafe(invoiceNumber)}.pdf`;
-    res.status(200).json({ url: invoiceUrl });
+    generateInvoiceService(req, res)
+
   } catch (error) {
     console.error('Error generating invoice:', error);
     res.status(500).json({ error: 'Internal server error' });

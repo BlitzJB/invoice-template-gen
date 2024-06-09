@@ -35,8 +35,8 @@ async function replacePlaceholders(inputFilePath, outputFilePath, data) {
     const itemsCount = itemIdKeys.filter(key => data[key] !== '').length;
 
     const worksheet = workbook.getWorksheet(1);
-    const firstBillRowIndex = 15;
-    const emptyBillRowsNumber = 15 - itemsCount
+    const firstBillRowIndex = 19;
+    const emptyBillRowsNumber = 19 - itemsCount
     hideRows(worksheet, firstBillRowIndex + itemsCount, emptyBillRowsNumber);
 
     await workbook.xlsx.writeFile(outputFilePath);

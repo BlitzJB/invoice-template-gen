@@ -109,7 +109,7 @@ async function generateInvoicePipeline(invoiceNumber, invoiceData) {
     // if any error occurs during the pipeline, it should be caught and logged, and the intermediate files should be cleaned up
     // interim files should be palced in /temp folder
 
-    const inputFilePath = `./template.xlsx`;
+    const inputFilePath = `./template-new.xlsx`;
     const dataUpdatedFilePath = `./temp/${makeStringFileNameSafe(invoiceNumber)}-data-updated.xlsx`;
     const pdfFilePath = `./temp/${makeStringFileNameSafe(invoiceNumber)}-output.pdf`;
     const finalPdfFilePath = `./invoices/${makeStringFileNameSafe(invoiceNumber)}.pdf`;
